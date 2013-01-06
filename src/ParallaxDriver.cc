@@ -104,39 +104,39 @@ char* ParallaxPositionController::byteArrayToString(uint8_t * buf, uint8_t bufle
     return str;
 }
 
-size_t ParallaxPositionController::transaction(uint8_t id, uint8_t cmd, uint8_t numToSend,
-        uint8_t * sendbuf, uint8_t numToRead, uint8_t * readbuf) {
-    char * datastr = byteArrayToString(sendbuf, numToSend);
+size_t ParallaxPositionController::transaction(uint8_t id, uint8_t cmd, uint8_t * sendbuf, 
+        uint8_t * readbuf) {
+    char * datastr = byteArrayToString(sendbuf, PPCCommand::len_send[cmd]);
 
     ROS_DEBUG("Starting transaction to id 0x%x, with command [%d: %s] and data %s", 
             id, cmd, PPCCommand::names[cmd], datastr);
     free(datastr);
 
     // create send buffer
-    uint8_t * buf = reinterpret_cast<uint8_t*>(malloc(numToSend + 1));
+    uint8_t * buf = reinterpret_cast<uint8_t*>(malloc(PPCCommand::len_send[cmd] + 1));
     buf[0] = id | PPCCommand::cmd[cmd];
 
-    if (numToSend > 0 && sendbuf != NULL) {
-        memcpy(buf + 1, sendbuf, numToSend);
+    if (PPCCommand::len_send[cmd] > 0 && sendbuf != NULL) {
+        memcpy(buf + 1, sendbuf, PPCCommand::len_send[cmd]);
     }
 
     // send the command
-    size_t bytes_sent = m_serial->write(buf, numToSend + 1);
-    if (bytes_sent != numToSend + 1) {
+    size_t bytes_sent = m_serial->write(buf, PPCCommand::len_send[cmd] + 1);
+    if (bytes_sent != PPCCommand::len_send[cmd] + 1) {
         ROS_WARN("Not all bytes successfully sent");
     }
 
     // wait for a response
     size_t bytes_recv = 0;
-    if (numToRead > 0 && readbuf != NULL) {
-        bytes_recv = m_serial->read(readbuf, numToRead);
+    if (PPCCommand::len_recv[cmd] > 0 && readbuf != NULL) {
+        bytes_recv = m_serial->read(readbuf, PPCCommand::len_recv[cmd]);
         datastr = byteArrayToString(readbuf, bytes_recv);
-        ROS_DEBUG("Received %d byte%s: %s", (int) bytes_recv, 
+        ROS_DEBUG("Received %d/%d byte%s: %s", (int) bytes_recv, PPCCommand::len_recv[cmd],
                 (bytes_recv == 1) ? "s" : "", datastr);
         free(datastr);
     }
 
-    if (bytes_recv != numToRead) {
+    if (bytes_recv != PPCCommand::len_recv[cmd]) {
         ROS_WARN("Not all bytes successfully read");
     }
 

@@ -62,15 +62,12 @@ class ParallaxPositionController {
         /**
          * Conducts a serial transaction
          * @param id the id to send to (0 is broadcast)
-         * @param cmd the command to send
-         * @param numToSend the number of data bytes to send
+         * @param cmd the command to send, from PPCCommand::command_t
          * @param sendbuf the buffer to send from
-         * @param numToRead the number of bytes to expect to read back
          * @param readbuf the buffer to read bytes into
          * @return the number of bytes read
          */
-        size_t transaction(uint8_t id, uint8_t cmd, uint8_t numToSend, 
-                uint8_t * sendbuf, uint8_t numToRead, uint8_t * readbuf);
+        size_t transaction(uint8_t id, uint8_t cmd, uint8_t * sendbuf, uint8_t * readbuf);
 
         /**
          * Deserializes a 16-bit signed integer. Assumes that the high byte is
