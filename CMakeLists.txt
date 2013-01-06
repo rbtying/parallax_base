@@ -47,7 +47,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
 #   LIBRARIES parallax_base
-    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
+    CATKIN_DEPENDS roscpp rospy std_msgs message_runtime serial
 )
 
 ###########
@@ -63,6 +63,8 @@ include_directories(include
 # add_library(parallax_base
 #   src/${PROJECT_NAME}/parallax_base.cpp
 # )
+add_library(parallax_driver src/ParallaxDriver.cc)
+target_link_libraries(parallax_driver ${catkin_LIBRARIES})
 
 ## Declare a cpp executable
 # add_executable(parallax_base_node src/parallax_base_node.cpp)
