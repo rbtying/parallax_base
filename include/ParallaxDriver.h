@@ -72,6 +72,25 @@ class ParallaxPositionController {
         size_t transaction(uint8_t id, uint8_t cmd, uint8_t numToSend, 
                 uint8_t * sendbuf, uint8_t numToRead, uint8_t * readbuf);
 
+        /**
+         * Deserializes a 16-bit signed integer. Assumes that the high byte is
+         * first.
+         * @param buf the buffer to read from. Precondition: buf holds at least
+         * two bytes
+         * @return a 16-bit signed integer formed by shifting the bytes in buf
+         */
+        int16_t construct_int16(uint8_t * buf);
+
+        /**
+         * Allocates a new string to hold all members of the byte array,
+         * printed in the format 0xXX where XX is the hexadecimal value of the
+         * byte.
+         * @param buf the byte array to print
+         * @param buflen the length of the byte array
+         * @return pointer to string (needs to be freed
+         */
+        char* byteArrayToString(uint8_t * buf, uint8_t buflen);
+
         // members
         std::string m_portname;
         serial::Serial * m_serial;
