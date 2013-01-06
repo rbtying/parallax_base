@@ -2,5 +2,13 @@
 *.swp
 *~
 
-# compile artifacts
+# Compiled files
+*.slo
+*.lo
+*.o
 *.pyc
+*.so
+*.dylib
+*.lai
+*.la
+*.a
