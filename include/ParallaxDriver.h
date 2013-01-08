@@ -9,6 +9,12 @@
  */
 class ParallaxPositionController {
     public:
+        // motor ID values
+        static const uint8_t MOTOR_ID_1 = 1;
+        static const uint8_t MOTOR_ID_2 = 2;
+        static const uint8_t MOTOR_ID_3 = 3;
+        static const uint8_t MOTOR_ID_4 = 4;
+
         /**
          * Constructs a ParallaxPositionController
          * @param ser the port to use
@@ -43,6 +49,12 @@ class ParallaxPositionController {
          * @return name of the current serial port
          */
         std::string getPortName();
+
+        /**
+         * Gets the number of motors controlled by this driver
+         * @return number of motors
+         */
+        int getNumMotors();
 
         // ------------------ Standard API Functions ----------------------
 
@@ -114,10 +126,6 @@ class ParallaxPositionController {
         void setSpeedRampRate(uint8_t id, uint8_t accel);
 
         // ---------------- End Standard API Functions --------------------
-        
-        // ------------------- Custom API Functions -----------------------
-
-        // ----------------- End Custom API Functions ---------------------
 
     private:
         /**

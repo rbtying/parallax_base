@@ -45,8 +45,13 @@ ParallaxPositionController::ParallaxPositionController(std::string ser, uint8_t 
 }
 
 ParallaxPositionController::~ParallaxPositionController() {
+    // stop all of the controllers
+    for (uint8_t i = 0; i < m_id_count; i++) {
+        clearTravelPosition(i);
+    }
+    close();
     delete m_serial;
-    delete m_id;
+    delete[] m_id;
 }
 
 void ParallaxPositionController::open() {
@@ -72,6 +77,10 @@ void ParallaxPositionController::initialize() {
     char * data = byteArrayToString(m_id, m_id_count);
     ROS_INFO("Initializing Parallax Position Controller with ids %s", data);
     free(data);
+}
+
+int ParallaxPositionController::getNumMotors() {
+    return m_id_count;
 }
 
 void ParallaxPositionController::close() {

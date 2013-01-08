@@ -63,7 +63,7 @@ include_directories(include
 # add_library(parallax_base
 #   src/${PROJECT_NAME}/parallax_base.cpp
 # )
-add_library(parallax_driver src/ParallaxDriver.cc)
+add_library(parallax_driver src/ParallaxDriver.cc src/VelocityController.cc)
 target_link_libraries(parallax_driver ${catkin_LIBRARIES})
 
 ## Declare a cpp executable
