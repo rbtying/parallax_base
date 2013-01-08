@@ -1,10 +1,12 @@
 #include "ParallaxDriver.h"
 
 #include <string>
-#include <iostream>
 #include <ros/ros.h>
 #include <serial/serial.h>
 
+/**
+ * Holds constants related to the command API
+ */
 namespace PPCCommand {
     enum command_t {
         CMD_QPOS = 0, // query position
@@ -35,15 +37,16 @@ namespace PPCCommand {
     static const uint8_t len_recv[] = {2, 2, 2, 1, 0, 0, 0, 0, 0, 0};
 };
 
-ParallaxPositionController::ParallaxPositionController(serial::Serial * ser, uint8_t id) {
-    if (ser == NULL) {
-        ROS_ERROR("Serial port is NULL");
-    }
-    m_serial = ser;
-    m_id = id;
+ParallaxPositionController::ParallaxPositionController(std::string ser, uint8_t * id, uint8_t num) { 
+    m_serial = new serial::Serial(ser, BAUDRATE);
+    m_id = new uint8_t[num];
+    memcpy(m_id, id, num);
+    m_id_count = num;
 }
 
 ParallaxPositionController::~ParallaxPositionController() {
+    delete m_serial;
+    delete m_id;
 }
 
 void ParallaxPositionController::open() {
@@ -65,6 +68,12 @@ void ParallaxPositionController::open() {
     }
 }
 
+void ParallaxPositionController::initialize() {
+    char * data = byteArrayToString(m_id, m_id_count);
+    ROS_INFO("Initializing Parallax Position Controller with ids %s", data);
+    free(data);
+}
+
 void ParallaxPositionController::close() {
     if (m_serial->isOpen()) {
         m_serial->close();
@@ -78,35 +87,10 @@ std::string ParallaxPositionController::getPortName() {
     return m_serial->getPort();
 }
 
-serial::Serial * ParallaxPositionController::getSerialPort() {
-    return m_serial;
-}
-
-void ParallaxPositionController::reset() {
-
-}
-
-void ParallaxPositionController::initialize() {
-    ROS_INFO("Initializing Parallax Position Controller with id 0x%x", m_id);
-}
-
-char* ParallaxPositionController::byteArrayToString(uint8_t * buf, uint8_t buflen) {
-    char * str = reinterpret_cast<char*>(malloc(buflen * 5 + 3));
-    memset(str, 0, buflen * 5 + 1);
-
-    char * ptr = str + 1;
-    for (uint8_t i = 0; i < buflen; i++) {
-        ptr += sprintf(ptr, "0x%02x ", buf[i]);
-    }
-    str[0] = '[';
-    str[buflen * 5 + 1] = ']';
-    str[buflen * 5 + 2] = '\0';
-    return str;
-}
-
-size_t ParallaxPositionController::transaction(uint8_t id, uint8_t cmd, uint8_t * sendbuf, 
+size_t ParallaxPositionController::transaction(uint8_t id_index, uint8_t cmd, uint8_t * sendbuf, 
         uint8_t * readbuf) {
     char * datastr = byteArrayToString(sendbuf, PPCCommand::len_send[cmd]);
+    uint8_t id = m_id[id_index];
 
     ROS_DEBUG("Starting transaction to id 0x%x, with command [%d: %s] and data %s", 
             id, cmd, PPCCommand::names[cmd], datastr);
@@ -149,4 +133,79 @@ size_t ParallaxPositionController::transaction(uint8_t id, uint8_t cmd, uint8_t 
 int16_t ParallaxPositionController::construct_int16(uint8_t * buf) {
     // assume high byte first
     return (buf[0] << 8u) | buf[1];
+}
+
+char* ParallaxPositionController::byteArrayToString(uint8_t * buf, uint8_t buflen) {
+    char * str = reinterpret_cast<char*>(malloc(buflen * 5 + 3));
+    memset(str, 0, buflen * 5 + 1);
+
+    char * ptr = str + 1;
+    for (uint8_t i = 0; i < buflen; i++) {
+        ptr += sprintf(ptr, "0x%02x ", buf[i]);
+    }
+    str[0] = '[';
+    str[buflen * 5 + 1] = ']';
+    str[buflen * 5 + 2] = '\0';
+    return str;
+}
+
+// Pure API methods
+
+int16_t ParallaxPositionController::queryPosition(uint8_t id) {
+    uint8_t readbuf[PPCCommand::len_recv[PPCCommand::CMD_QPOS]];
+    transaction(id, PPCCommand::CMD_QPOS, NULL, readbuf);
+    int16_t pos = construct_int16(readbuf);
+    return pos;
+}
+
+int16_t ParallaxPositionController::queryAvgSpeed(uint8_t id) {
+    uint8_t readbuf[PPCCommand::len_recv[PPCCommand::CMD_QSPD]];
+    transaction(id, PPCCommand::CMD_QSPD, NULL, readbuf);
+    int16_t spd = construct_int16(readbuf);
+    return spd;
+}
+
+uint8_t ParallaxPositionController::isAtPosition(uint8_t id, uint8_t tolerance) {
+    uint8_t sendbuf[PPCCommand::len_send[PPCCommand::CMD_CHFA]];
+    uint8_t readbuf[PPCCommand::len_recv[PPCCommand::CMD_CHFA]];
+    sendbuf[0] = tolerance;
+    transaction(id, PPCCommand::CMD_CHFA, sendbuf, readbuf);
+    return readbuf[0];
+}
+
+void ParallaxPositionController::queueTravelPosition(uint8_t id, int16_t position) {
+    uint8_t sendbuf[PPCCommand::len_send[PPCCommand::CMD_TRVL]];
+    sendbuf[0] = position << 8u;
+    sendbuf[1] = position & 0xff;
+    transaction(id, PPCCommand::CMD_TRVL, sendbuf, NULL);
+}
+
+void ParallaxPositionController::clearTravelPosition(uint8_t id) {
+    transaction(id, PPCCommand::CMD_CLRP, NULL, NULL);
+}
+
+void ParallaxPositionController::setPositionAsReversed(uint8_t id) {
+    transaction(id, PPCCommand::CMD_SREV, NULL, NULL);
+}
+
+void ParallaxPositionController::setMinimumDelayValue(uint8_t id, float seconds) {
+    // calculation from datasheet
+    // seconds = (delaval * 4.34 us) + 40us
+    uint8_t delayval = (seconds - 40 * (1.0E-6)) / (4.34 * (1.0E-6));
+    transaction(id, PPCCommand::CMD_STXD, &delayval, NULL);
+}
+
+void ParallaxPositionController::setMaximumSpeed(uint8_t id, uint16_t speed) {
+    uint8_t sendbuf[PPCCommand::len_send[PPCCommand::CMD_SMAX]];
+    sendbuf[0] = speed << 8u;
+    sendbuf[1] = speed & 0xff;
+    transaction(id, PPCCommand::CMD_SMAX, sendbuf, NULL);
+}
+
+void ParallaxPositionController::setSpeedRampRate(uint8_t id, uint8_t accel) {
+    uint8_t sendbuf[PPCCommand::len_send[PPCCommand::CMD_SSRR]];
+    sendbuf[0] = accel << 8u;
+    sendbuf[1] = accel & 0xff;
+    transaction(id, PPCCommand::CMD_SSRR, sendbuf, NULL);
+
 }
