@@ -5,7 +5,7 @@ project(parallax_base)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation
-    serial)
+    serial tf)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -69,7 +69,7 @@ target_link_libraries(parallax_driver ${catkin_LIBRARIES})
 ## Declare a cpp executable
 # add_executable(parallax_base_node src/parallax_base_node.cpp)
 add_executable(parallax_base_node src/main.cc src/ParallaxBase.cc)
-target_link_libraries(parallax_base_node ${catkin_LIBRARIES})
+target_link_libraries(parallax_base_node ${catkin_LIBRARIES} parallax_driver)
 
 ## Add dependencies to the executable
 # add_dependencies(parallax_base_node ${PROJECT_NAME})
